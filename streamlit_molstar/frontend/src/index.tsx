@@ -1,7 +1,7 @@
 import React from "react"
 import ReactDOM from "react-dom"
 // @ts-ignore
-import MolstarComponent from "./MolstarComponent"
+import MolstarComponent from "./MolStarComponent"
 
 ReactDOM.render(
   <React.StrictMode>
