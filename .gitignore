@@ -13,6 +13,8 @@ var
 # Distribution / packaging
 .Python
 build/
+!streamlit_molstar/frontend/build/
+!streamlit_molstar/frontend/build/**
 develop-eggs/
 dist/
 downloads/
