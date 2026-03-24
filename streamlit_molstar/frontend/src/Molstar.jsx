@@ -381,6 +381,7 @@ const Molstar = props => {
 Molstar.propTypes = {
   modelFile: PropTypes.object,
   trajFile: PropTypes.object,
+  focusResidue: PropTypes.object,
 
   // Viz Control
   showAxes: PropTypes.bool,
