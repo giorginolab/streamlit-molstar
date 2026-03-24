@@ -17,6 +17,9 @@ import { presetStaticComponent } from '@dp-launching/molstar/lib/mol-plugin-stat
 
 import { Material } from '@dp-launching/molstar/lib/mol-util/material';
 
+import { Script } from '@dp-launching/molstar/lib/mol-script/script';
+import { StructureSelection } from '@dp-launching/molstar/lib/mol-model/structure/query/selection';
+
 import { createPluginUI } from './create-plugin-ui';
 const CustomMaterial = Material({ roughness: 0.2, metalness: 0 });
 const PresetParams = {
@@ -170,7 +173,7 @@ const ViewerAutoPreset = StructureRepresentationPresetProvider({
 const Molstar = props => {
 
   const {
-    modelFile, trajFile,
+    modelFile, trajFile, focusResidue,
     height = '100%', width = '100%',
     showAxes = true,
     defaultShowControls = false,
@@ -229,7 +232,7 @@ const Molstar = props => {
 
   useEffect(() => {
     loadStructure(modelFile, trajFile, plugin.current);
-  }, [modelFile, trajFile])
+  }, [modelFile?.name, modelFile?.url, modelFile?.data, modelFile?.format, trajFile?.name, trajFile?.url, trajFile?.data, trajFile?.format])
 
 
   useEffect(() => {
@@ -257,6 +260,66 @@ const Molstar = props => {
       }
     }
   }, [showAxes])
+
+  useEffect(() => {
+    try {
+      if (!plugin.current) return;
+      const p = plugin.current;
+      const interactivity = p.managers.interactivity;
+      const structure = p.managers.structure;
+      const camera = p.managers.camera;
+
+      if (interactivity && interactivity.clearHighlights) interactivity.clearHighlights();
+      if (interactivity && interactivity.lociSelects && interactivity.lociSelects.deselectAll) interactivity.lociSelects.deselectAll();
+
+      if (!focusResidue) {
+        if (structure && structure.focus && structure.focus.clear) structure.focus.clear();
+        return;
+      }
+
+      // Reintroduce the highlight/focus logic found in the build artifact
+      const doFocus = () => {
+          const structures = structure && structure.hierarchy && structure.hierarchy.current && structure.hierarchy.current.structures;
+          const structureData = structures && structures[0] && structures[0].cell && structures[0].cell.obj && structures[0].cell.obj.data;
+          if (!structureData) return;
+
+          const loci = StructureSelection.toLociWithSourceUnits(Script.getStructureSelection(Q => {
+              const tests = [Q.core.rel.eq([Q.ammp('auth_seq_id'), focusResidue.residueNumber])];
+              if (focusResidue.insertionCode) {
+                  tests.push(Q.core.rel.eq([Q.ammp('pdbx_PDB_ins_code'), focusResidue.insertionCode]));
+              }
+              return Q.struct.modifier.union([
+                  Q.struct.generator.atomGroups({
+                      'chain-test': Q.core.rel.eq([Q.ammp('auth_asym_id'), focusResidue.chainId]),
+                      'residue-test': Q.core.logic.and(tests)
+                  })
+              ]);
+          }, structureData));
+
+          if (interactivity && interactivity.lociHighlights && interactivity.lociHighlights.highlightOnly) {
+              interactivity.lociHighlights.highlightOnly({ loci });
+          }
+          if (interactivity && interactivity.lociSelects && interactivity.lociSelects.select) {
+              interactivity.lociSelects.select({ loci });
+          }
+          if (structure && structure.focus && structure.focus.setFromLoci) {
+              structure.focus.setFromLoci(loci);
+          }
+          if (camera && camera.focusLoci) {
+              camera.focusLoci(loci, { durationMs: 750 });
+          }
+      }
+
+      doFocus();
+
+    } catch (e) {
+      if (plugin.current && focusResidue && Array.isArray(focusResidue.center) && focusResidue.center.length >= 3) {
+        const radius = Math.max(Number(focusResidue.radius) || 0, 2.5);
+        plugin.current.managers.camera.focusSphere({ center: focusResidue.center, radius: radius }, { durationMs: 750 });
+      }
+      console.warn("Failed to apply residue highlight", e);
+    }
+  }, [focusResidue?.token]);
 
   
 

@@ -33,6 +33,7 @@ class MolstarComponent extends StreamlitComponentBase<State> {
     const height = this.props.args["height"]
     const modelFile = this.props.args["modelFile"]
     const trajFile = this.props.args["trajFile"]
+    const focusResidue = this.props.args["focusResidue"]
 
     if (modelFile && modelFile.data) {
       modelFile.data = this.props.args["modelFile_data"]
@@ -46,6 +47,7 @@ class MolstarComponent extends StreamlitComponentBase<State> {
           <Molstar
             modelFile={modelFile}
             trajFile={trajFile}
+            focusResidue={focusResidue}
             showExpand={false}
             showAnimation={true}
           />
